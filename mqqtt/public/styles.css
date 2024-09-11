@@ -1,0 +1,13 @@
+body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+}
+
+canvas {
+    margin: 20px auto;
+    border: 1px solid #ddd;
+}
+
+select {
+    margin: 20px;
+}

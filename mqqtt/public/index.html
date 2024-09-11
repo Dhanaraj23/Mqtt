@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sensor Data</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        .data { margin: 20px; }
+    </style>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>Sensor Data</h1>
+    <!-- Dropdown to select user -->
+    <label for="userSelect">Select User:</label>
+    <select id="userSelect">
+        <!-- Dynamic users will be added here via JS -->
+    </select>
+    <div class="data">
+        <p id="temperature">Weight: </p>
+        <!-- <p id="humidity">Humidity: </p> -->
+    </div>
+    <canvas id="myChart" width="700" height="500"></canvas>
+
+    <script>
+        let currentUser = 'user1'; // Default user
+        let lastFetchedTemperature = null; // Store last fetched temperature
+        // let lastFetchedHumidity = null; // Store last fetched humidity
+
+        // Chart.js setup
+        const ctx = document.getElementById('myChart').getContext('2d');
+        const myChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Temperature',
+                    data: [],
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    fill: false
+                }]
+            },
+            options: {
+                scales: {
+                    x: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+
+        // Define the fetchData function
+        async function fetchData() {
+            try {
+                const response = await fetch('/data');
+                const data = await response.json();
+
+                // Ensure currentUser exists in the data object
+                const userData = data[currentUser];
+                if (!userData) {
+                    console.error('User data is undefined');
+                    return;
+                }
+
+                // Update temperature and humidity text, even if the value hasn't changed
+                document.getElementById('temperature').textContent = `Weight: ${userData.temperature} °C`;
+                // document.getElementById('humidity').textContent = `Humidity: ${userData.humidity} %`;
+
+                // Only update the chart if the new temperature is different from the last one
+                if (userData.temperature !== lastFetchedTemperature) {
+                    myChart.data.labels.push(new Date().toLocaleTimeString());
+                    myChart.data.datasets[0].data.push(userData.temperature);
+                    myChart.update();
+                }
+
+                // Update the last fetched temperature and humidity
+                lastFetchedTemperature = userData.temperature;
+                // lastFetchedHumidity = userData.humidity;
+            } catch (error) {
+                console.error('Error fetching data:', error);
+            }
+        }
+
+        // Call fetchData every 5 seconds to update the temperature
+        setInterval(fetchData, 5000);
+
+        // Fetch user list and populate the dropdown
+        async function fetchUserList() {
+            const response = await fetch('/users');
+            const users = await response.json();
+            const userSelect = document.getElementById('userSelect');
+            users.forEach(user => {
+                const option = document.createElement('option');
+                option.value = user;
+                option.textContent = user;
+                userSelect.appendChild(option);
+            });
+        }
+
+        // Listen for user selection change
+        document.getElementById('userSelect').addEventListener('change', function() {
+            currentUser = this.value;
+            myChart.data.labels = []; // Reset chart data
+            myChart.data.datasets[0].data = [];
+            fetchData(); // Fetch data for the newly selected user
+        });
+
+        // Initial data fetches
+        fetchUserList(); // Populate user dropdown
+        fetchData(); // Fetch initial temperature data
+    </script>
+</body>
+</html>
